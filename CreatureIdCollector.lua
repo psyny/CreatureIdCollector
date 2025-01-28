@@ -32,6 +32,13 @@ local function StringStartsWith(str, prefix)
     return str:sub(1, #prefix) == prefix
 end
 
+local avoidSoftGroupTokenAdd = {
+    ["mou"] = true,
+    ["tar"] = true,
+    ["nam"] = true,
+    ["npc"] = true,
+}
+
 function CreatureIdCollector:FindUnitToken(unitName)
     -- Check the player
     local unittokenname = self:GetUnitTokenFullName("player")    
@@ -116,6 +123,13 @@ function CreatureIdCollector:SetCreatureDataOfToken(unittoken)
                 classification = UnitClassification(unittoken)
             end
 
+            local isInGroup = UnitCanCooperate("player", unittoken)
+            if isInGroup then
+                if avoidSoftGroupTokenAdd[string.sub(unittoken, 1, 3)] then
+                    classification = "softgroup"
+                end
+            end            
+
             local creatureData = {
                 name = creatureName,
                 npcId = npcId,
@@ -189,12 +203,8 @@ function CreatureIdCollector:HandleTalkingHeadAux()
                 if displayId then
                     local zoneId = C_Map.GetBestMapForUnit("player")
                     local inInstance, instanceType = IsInInstance()
-                    local classification = "boss"
+                    local classification = "talkinghead"
         
-                    if not StringStartsWith(unittoken, "boss") then
-                        classification = UnitClassification(unittoken)
-                    end
-
                     local creatureData = {
                         name = nameText,
                         npcId = nil,
@@ -209,4 +219,85 @@ function CreatureIdCollector:HandleTalkingHeadAux()
             end    
         end
     end
+end
+
+local function tableToJson(tbl)
+    local function jsonscape(val)
+        return '"' .. val:gsub('"', '\\"') .. '"'
+    end
+
+    local function serialize(value)
+        if type(value) == "table" then
+            local result = {}
+            for k, v in pairs(value) do
+                local tk = type(k)
+                if (tk == "string" and #k > 0) or tk ~= "string" then
+                    -- local key = type(k) == "string" and ('"' .. k .. '"') or k
+                    local key = jsonscape("" .. k)
+                    table.insert(result, key .. ":" .. serialize(v))
+                end
+            end
+            return "{" .. table.concat(result, ",") .. "}"
+        elseif type(value) == "string" then
+            return jsonscape(value)
+        elseif type(value) == "number" or type(value) == "boolean" then
+            return tostring(value)
+        else
+            return "null"
+        end
+    end
+    return serialize(tbl)
+end
+
+
+SLASH_CreatureIdCollectorDump1 = "/CreatureIdCollectorDump"
+SlashCmdList["CreatureIdCollectorDump"] = function()   
+    local tableToDump = CreatureIdCollectorDB
+ 
+    -- Serialize the table to JSON
+    local json = tableToJson(tableToDump)
+
+    -- Create the main frame
+    local frame = CreateFrame("Frame", "CopyFrame", UIParent, "BasicFrameTemplateWithInset")
+    frame:SetSize(600, 400)
+    frame:SetPoint("CENTER")
+    frame:SetMovable(true)
+    frame:EnableMouse(true)
+    frame:RegisterForDrag("LeftButton")
+    frame:SetScript("OnDragStart", frame.StartMoving)
+    frame:SetScript("OnDragStop", frame.StopMovingOrSizing)
+    frame:Hide()
+
+    -- Title text
+    frame.title = frame:CreateFontString(nil, "OVERLAY")
+    frame.title:SetFontObject("GameFontHighlight")
+    frame.title:SetPoint("CENTER", frame.TitleBg, "CENTER", 0, 0)
+    frame.title:SetText("Copy JSON")
+
+    -- Scroll frame
+    frame.scrollFrame = CreateFrame("ScrollFrame", nil, frame, "UIPanelScrollFrameTemplate")
+    frame.scrollFrame:SetPoint("TOPLEFT", frame, "TOPLEFT", 10, -30)
+    frame.scrollFrame:SetPoint("BOTTOMRIGHT", frame, "BOTTOMRIGHT", -30, 10)
+
+    -- Edit box
+    frame.editBox = CreateFrame("EditBox", nil, frame.scrollFrame)
+    frame.editBox:SetMultiLine(true)
+    frame.editBox:SetFontObject("ChatFontNormal")
+    frame.editBox:SetWidth(540)
+    frame.editBox:SetAutoFocus(false)
+    frame.editBox:SetScript("OnEscapePressed", function() frame:Hide() end)
+
+    -- Set scroll child
+    frame.scrollFrame:SetScrollChild(frame.editBox)
+
+    -- Close button
+    frame.closeButton = CreateFrame("Button", nil, frame, "UIPanelCloseButton")
+    frame.closeButton:SetPoint("TOPRIGHT", frame, "TOPRIGHT", -5, -5)
+
+    -- Add to edit box
+    frame:Show()
+    frame.editBox:SetText(json)
+    frame.editBox:HighlightText()
+
+    return frame
 end
