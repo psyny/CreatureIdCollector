@@ -106,14 +106,10 @@ end
 function CreatureIdCollector:SetCreatureDataOfToken(unittoken)
     -- Check if the target is an NPC
     if UnitExists(unittoken) then
-        local creatureName, creatureServer = UnitName(unittoken)
+        local creatureName, creatureServer = UnitName(unittoken)        
         if not UnitIsPlayer(unittoken) then     
             -- Get GUID and creatureID
-            local guid = UnitGUID(unittoken)
-            local npcId = nil
-            if guid then
-                npcId = tonumber(guid:match("[Creature|Vehicle|Pet|Vignette|Instance]%-.-%-.-%-.-%-.-%-(%d+)"))
-            end
+            local npcId = UnitCreatureID(unittoken)
 
             local zoneId = C_Map.GetBestMapForUnit("player")
             local inInstance, instanceType = IsInInstance()

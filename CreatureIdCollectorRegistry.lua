@@ -3,6 +3,10 @@
 CreatureIdCollectorRegistry = {}
 
 function CreatureIdCollectorRegistry:RegisterCreature(creatureData)
+    if issecretvalue(creatureData.name) then
+        return
+    end
+    
     if not creatureData.name then
         return
     end
