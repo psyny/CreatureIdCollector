@@ -1,12 +1,50 @@
 -- CreatureIdCollectorRegistry.lua
 
+-- Structure:
+--     CreatureIdCollectorDB[name][gameVersion] = {
+--         name = name,
+--         world | instance = {                -- from IsInInstance()
+--             [classification] = {
+--                 [zoneId] = {                -- C_Map.GetBestMapForUnit("player"), 0 if nil
+--                     nids = { [npcId] = 1 },
+--                     dids = { [displayId] = 1 },
+--                 },
+--             },
+--         },
+--     }
+-- gameVersion is the version string from GetBuildInfo(), e.g. "12.0.1"
+
 CreatureIdCollectorRegistry = {}
 
+local GAME_VERSION = (GetBuildInfo())
+
+-- Records saved before game versions were tracked are moved under this key
+local LEGACY_VERSION = "legacy"
+
+local isMigrated = false
+
+-- Old records were CreatureIdCollectorDB[name] = { name, world, instance }
+local function IsLegacyRecord(creatureDb)
+    return type(creatureDb.name) == "string" and (type(creatureDb.world) == "table" or type(creatureDb.instance) == "table")
+end
+
+local function MigrateLegacyRecords()
+    isMigrated = true
+
+    for name, creatureDb in pairs(CreatureIdCollectorDB) do
+        if type(creatureDb) == "table" and IsLegacyRecord(creatureDb) then
+            CreatureIdCollectorDB[name] = {
+                [LEGACY_VERSION] = creatureDb,
+            }
+        end
+    end
+end
+
 function CreatureIdCollectorRegistry:RegisterCreature(creatureData)
-    if issecretvalue(creatureData.name) then
+    if issecretvalue and issecretvalue(creatureData.name) then
         return
     end
-    
+
     if not creatureData.name then
         return
     end
@@ -15,15 +53,25 @@ function CreatureIdCollectorRegistry:RegisterCreature(creatureData)
         CreatureIdCollectorDB = {}
     end
 
-    local creatureDb = CreatureIdCollectorDB[creatureData.name]
+    if not isMigrated then
+        MigrateLegacyRecords()
+    end
+
+    local creatureDbByVersion = CreatureIdCollectorDB[creatureData.name]
+    if not creatureDbByVersion then
+        creatureDbByVersion = {}
+        CreatureIdCollectorDB[creatureData.name] = creatureDbByVersion
+    end
+
+    local creatureDb = creatureDbByVersion[GAME_VERSION]
     if not creatureDb then
         -- Create Creature Registry on Database
         creatureDb = {
             name = creatureData.name,
             world = {},
-            instance = {},    
+            instance = {},
         }
-        CreatureIdCollectorDB[creatureData.name] = creatureDb
+        creatureDbByVersion[GAME_VERSION] = creatureDb
     end
 
     -- Instance vs World
@@ -65,12 +113,12 @@ function CreatureIdCollectorRegistry:RegisterCreature(creatureData)
         creatureDbClass[zoneId] = creatureDbZone
     end
 
-    -- Data    
+    -- Data
     if creatureData.npcId then
         creatureDbZone.nids[creatureData.npcId] = 1
     end
 
     if creatureData.displayId then
         creatureDbZone.dids[creatureData.displayId] = 1
-    end    
+    end
 end

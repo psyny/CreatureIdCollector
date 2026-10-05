@@ -22,7 +22,9 @@ frame:SetScript("OnEvent", function(self, event, ...)
     elseif event == "PLAYER_TARGET_CHANGED" then
         CreatureIdCollector:HandleTargetChange(...)     
     elseif event == "UPDATE_MOUSEOVER_UNIT" then
-        CreatureIdCollector:HandleMouseoverChange(...)  
+        CreatureIdCollector:HandleMouseoverChange(...)
+    elseif event == "GROUP_ROSTER_UPDATE" then
+        CreatureIdCollector:HandleRosterChange(...)
     elseif event == "TALKINGHEAD_REQUESTED" then
         CreatureIdCollector:HandleTalkingHead(...)             
     end
@@ -57,7 +59,7 @@ function CreatureIdCollector:FindUnitToken(unitName)
         -- Look for 
         for i = 1, GetNumGroupMembers() do
             local unittoken = "raid" .. i
-            local unittokenname = self:GetUnitTokenFullName(unittokenname)
+            local unittokenname = self:GetUnitTokenFullName(unittoken)
             if unittokenname == unitName then
                 return unittoken
             end
@@ -65,7 +67,7 @@ function CreatureIdCollector:FindUnitToken(unitName)
     elseif IsInGroup() then
         for i = 1, GetNumSubgroupMembers() do
             local unittoken = "party" .. i
-            local unittokenname = self:GetUnitTokenFullName(unittokenname)
+            local unittokenname = self:GetUnitTokenFullName(unittoken)
             if unittokenname == unitName then
                 return unittoken
             end

@@ -1,0 +1,14 @@
+## Interface: 16000, 16001
+## Title: CreatureIdCollector
+## Notes: Collects and categorize creature Ids
+## Author: Psyny
+## Version: 1.1
+## DefaultState: enabled
+
+## SavedVariables: CreatureIdCollectorDB
+
+## LoadManagers: AddonLoader
+## X-LoadOn-Always: delayed
+
+CreatureIdCollectorRegistry.lua
+CreatureIdCollector.lua
